@@ -1,0 +1,80 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  REPO: ${{ github.repository }}
+  BASE_URL: https://oberonru.github.io/cheburnexus-unity-skills
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate (with version-bump check)
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            python tools/skills.py validate
+          else
+            python tools/skills.py validate --against "$BEFORE"
+          fi
+
+      - name: Fetch stats
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/skills.py stats --repo "$REPO" --out stats.json
+
+      - name: Build
+        run: |
+          if [ -f stats.json ]; then STATS="--stats stats.json"; else STATS=""; fi
+          python tools/skills.py build --out dist --base-url "$BASE_URL" --repo "$REPO" $STATS
+
+      - name: Create missing releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > releases.txt
+          import json
+          for s in json.load(open("dist/index.json"))["skills"]:
+              print(s["id"], s["version"], s["title"].replace("\t", " "), sep="\t")
+          PY
+          while IFS=$'\t' read -r id version title; do
+            tag="${id}-v${version}"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "release $tag exists"
+            else
+              gh release create "$tag" "dist/zips/${id}-${version}.zip" \
+                --title "${title} ${version}" \
+                --notes "Skill ${id} version ${version}. Install through the Cheburnexus plugin Library page or unpack the zip into .claude/skills/${id}/."
+            fi
+          done < releases.txt
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

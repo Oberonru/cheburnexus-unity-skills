@@ -1,0 +1,45 @@
+name: stats
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  REPO: ${{ github.repository }}
+  BASE_URL: https://oberonru.github.io/cheburnexus-unity-skills
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch stats
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/skills.py stats --repo "$REPO" --out stats.json
+      - name: Build
+        run: python tools/skills.py build --out dist --base-url "$BASE_URL" --repo "$REPO" --stats stats.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
