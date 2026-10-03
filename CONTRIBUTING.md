@@ -61,12 +61,13 @@ open a PR that edits that file and explain why no existing one fits.
 skills/<id>/SKILL.md
 skills/<id>/scripts/      optional helper code
 skills/<id>/references/   optional longer docs
-skills/<id>/assets/       optional images (png, jpg, svg only)
+skills/<id>/assets/       optional text assets (for example svg)
 ```
 
 - `SKILL.md` at most 500 lines. Move long material to `references/`.
 - Skill folder at most 1 MB; no single file over 256 KB.
-- No binary files, except png/jpg/svg under `assets/`.
+- Text files only (UTF-8). The plugin installs text and nothing else, so validation rejects
+  any binary file, images such as png/jpg included. SVG is text and is allowed.
 - No symlinks, no hidden files (names starting with a dot), ASCII file names only.
 - Skill ids are unique.
 

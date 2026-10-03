@@ -31,7 +31,6 @@ SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 LICENSES = {"MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0", "CC-BY-4.0"}
 KINDS = {"auto", "manual"}
 CODE_EXTS = {".cs", ".py", ".sh", ".ps1", ".js"}
-BINARY_OK_EXTS = {".png", ".jpg", ".svg"}
 
 MAX_SKILL_MD_LINES = 500
 MAX_FOLDER_BYTES = 1024 * 1024
@@ -210,12 +209,16 @@ def validate_skill(sid: str, categories: set[str]) -> list[str]:
             total += size
             if size > MAX_FILE_BYTES:
                 err(f"file too large ({size} bytes, max {MAX_FILE_BYTES}): {rel}")
+            # The plugin installs text files only (UTF-8, no NUL bytes), so any binary file is
+            # rejected, images included. SVG is text and stays allowed.
             data = fp.read_bytes()[:MAX_FILE_BYTES + 1]
             if b"\x00" in data:
-                ext = fp.suffix.lower()
-                in_assets = rel.startswith("assets/")
-                if not (in_assets and ext in BINARY_OK_EXTS):
-                    err(f"binary file not allowed (only png/jpg/svg under assets/): {rel}")
+                err(f"binary file not allowed (text files only; svg is fine): {rel}")
+            elif size <= MAX_FILE_BYTES:
+                try:
+                    data.decode("utf-8")
+                except UnicodeDecodeError:
+                    err(f"file is not valid UTF-8 text: {rel}")
     if total > MAX_FOLDER_BYTES:
         err(f"skill folder too large ({total} bytes, max {MAX_FOLDER_BYTES})")
 
