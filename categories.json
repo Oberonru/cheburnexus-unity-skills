@@ -1,0 +1,12 @@
+[
+  {"id": "architecture", "title": "Architecture"},
+  {"id": "ui", "title": "UI"},
+  {"id": "ai", "title": "AI"},
+  {"id": "animation", "title": "Animation"},
+  {"id": "performance", "title": "Performance"},
+  {"id": "testing", "title": "Testing"},
+  {"id": "networking", "title": "Networking"},
+  {"id": "assets", "title": "Assets"},
+  {"id": "code-quality", "title": "Code quality"},
+  {"id": "workflow", "title": "Workflow"}
+]
