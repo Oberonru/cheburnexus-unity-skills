@@ -5,6 +5,7 @@ Commands:
   validate  check every skill under skills/
   build     produce dist/ (index.json, skill previews, deterministic zips)
   stats     fetch download/like counters from GitHub into a stats.json
+  discussions  create missing 'Skills' discussions (the likes source)
 
 Python 3.12 standard library only.
 """
@@ -480,32 +481,87 @@ def fetch_downloads(repo: str, token: str | None) -> dict[str, int]:
     return totals
 
 
-def fetch_discussions(repo: str, token: str) -> dict[str, dict] | None:
-    """Return {title: {likes, url}} for category 'Skills', or None if no such category."""
-    owner, name = repo.split("/", 1)
-    q_cat = ("query($o:String!,$n:String!){repository(owner:$o,name:$n){"
-             "discussionCategories(first:50){nodes{id name}}}}")
-    res = _request("https://api.github.com/graphql", token,
-                   {"query": q_cat, "variables": {"o": owner, "n": name}})
-    nodes = (((res.get("data") or {}).get("repository") or {}).get("discussionCategories") or {}).get("nodes") or []
+def _graphql(token: str, query: str, variables: dict) -> dict:
+    res = _request("https://api.github.com/graphql", token, {"query": query, "variables": variables})
+    if res.get("errors"):
+        raise ValueError("GraphQL: " + "; ".join(str(e.get("message")) for e in res["errors"]))
+    return res["data"]
+
+
+def find_skills_category(owner: str, name: str, token: str):
+    """Return (repository_id, category_id or None) for discussion category 'Skills'."""
+    q = ("query($o:String!,$n:String!){repository(owner:$o,name:$n){id "
+         "discussionCategories(first:50){nodes{id name}}}}")
+    repo = _graphql(token, q, {"o": owner, "n": name})["repository"]
+    nodes = (repo.get("discussionCategories") or {}).get("nodes") or []
     cat = next((c for c in nodes if c["name"].lower() == "skills"), None)
-    if not cat:
-        return None
+    return repo["id"], (cat["id"] if cat else None)
+
+
+def list_discussions(owner: str, name: str, cat_id: str, token: str) -> dict[str, dict]:
+    """{title: {likes, url, number}} for a category. Duplicate titles: the oldest wins."""
     q = ("query($o:String!,$n:String!,$c:ID!,$a:String){repository(owner:$o,name:$n){"
-         "discussions(first:100,categoryId:$c,after:$a){nodes{title url upvoteCount}"
+         "discussions(first:100,categoryId:$c,after:$a){nodes{number title url createdAt upvoteCount}"
          "pageInfo{hasNextPage endCursor}}}}")
     found: dict[str, dict] = {}
+    keys: dict[str, tuple] = {}
     after = None
     while True:
-        res = _request("https://api.github.com/graphql", token,
-                       {"query": q, "variables": {"o": owner, "n": name, "c": cat["id"], "a": after}})
-        d = res["data"]["repository"]["discussions"]
+        d = _graphql(token, q, {"o": owner, "n": name, "c": cat_id, "a": after})["repository"]["discussions"]
         for n in d["nodes"]:
-            found[n["title"].strip()] = {"likes": n["upvoteCount"], "url": n["url"]}
+            t = n["title"].strip()
+            # createdAt is ISO 8601 UTC, so string order is time order; number breaks ties
+            key = (n["createdAt"], n["number"])
+            if t not in found or key < keys[t]:
+                found[t] = {"likes": n["upvoteCount"], "url": n["url"], "number": n["number"]}
+                keys[t] = key
         if not d["pageInfo"]["hasNextPage"]:
             break
         after = d["pageInfo"]["endCursor"]
     return found
+
+
+def fetch_discussions(repo: str, token: str) -> dict[str, dict] | None:
+    """Return {title: {likes, url}} for category 'Skills', or None if no such category."""
+    owner, name = repo.split("/", 1)
+    _, cat_id = find_skills_category(owner, name, token)
+    if not cat_id:
+        return None
+    return list_discussions(owner, name, cat_id, token)
+
+
+def cmd_discussions(args) -> int:
+    """Create a discussion (title = skill id) in category 'Skills' for each skill lacking one."""
+    token = os.environ.get("GITHUB_TOKEN") or None
+    if not token:
+        print("note: GITHUB_TOKEN not set; discussions not created")
+        return 0
+    owner, name = args.repo.split("/", 1)
+    try:
+        repo_id, cat_id = find_skills_category(owner, name, token)
+        if not cat_id:
+            print("note: discussion category 'Skills' not found (enable Discussions and create it); "
+                  "no discussions created")
+            return 0
+        existing = list_discussions(owner, name, cat_id, token)
+        mutation = ("mutation($r:ID!,$c:ID!,$t:String!,$b:String!){createDiscussion(input:"
+                    "{repositoryId:$r,categoryId:$c,title:$t,body:$b}){discussion{number url}}}")
+        created = 0
+        for sid in list_skill_ids():
+            if sid in existing:
+                continue
+            top, meta = read_skill_meta(SKILLS_DIR / sid)
+            body = (f"**{meta['title']}**\n\n{top['description']}\n\n"
+                    "Upvote (\u2191) this discussion if the skill is useful. "
+                    "Questions and feedback \u2014 in the comments.\n\n"
+                    f"https://github.com/{args.repo}/blob/main/skills/{sid}/SKILL.md")
+            d = _graphql(token, mutation, {"r": repo_id, "c": cat_id, "t": sid, "b": body})
+            print(f"created discussion for {sid}: {d['createDiscussion']['discussion']['url']}")
+            created += 1
+        print(f"discussions: {created} created, {len(existing)} already existed")
+    except (urllib.error.URLError, ValueError, OSError, KeyError, TypeError) as e:
+        print(f"warning: could not create discussions: {e}", file=sys.stderr)
+    return 0
 
 
 def cmd_stats(args) -> int:
@@ -532,6 +588,18 @@ def cmd_stats(args) -> int:
             print(f"warning: could not fetch discussions: {e}", file=sys.stderr)
     else:
         print("note: GITHUB_TOKEN not set; likes stay null")
+    if args.previous:
+        # keep the last known numbers where a fetch failed (value is still None)
+        try:
+            req = urllib.request.Request(args.previous, headers={"User-Agent": "cheburnexus-unity-skills"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                prev = {x["id"]: x for x in json.loads(r.read().decode("utf-8")).get("skills", [])}
+            for sid, st in result.items():
+                for k in ("downloads", "likes", "discussUrl"):
+                    if st[k] is None and prev.get(sid, {}).get(k) is not None:
+                        st[k] = prev[sid][k]
+        except (urllib.error.URLError, ValueError, OSError, KeyError, TypeError) as e:
+            print(f"note: no previous index to fall back on ({args.previous}): {e}")
     payload = {
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "skills": result,
@@ -561,7 +629,12 @@ def main(argv=None) -> int:
     s = sub.add_parser("stats", help="fetch downloads/likes from GitHub")
     s.add_argument("--repo", required=True, help="owner/name")
     s.add_argument("--out", default="stats.json")
+    s.add_argument("--previous", help="URL of the deployed index.json; its counters fill values that failed to fetch")
     s.set_defaults(fn=cmd_stats)
+
+    d = sub.add_parser("discussions", help="create missing 'Skills' discussions (one per skill id)")
+    d.add_argument("--repo", required=True, help="owner/name")
+    d.set_defaults(fn=cmd_discussions)
 
     args = p.parse_args(argv)
     return args.fn(args)

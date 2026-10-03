@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  discussions: write
   pages: write
   id-token: write
 
@@ -41,16 +42,8 @@ jobs:
             python tools/skills.py validate --against "$BEFORE"
           fi
 
-      - name: Fetch stats
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python tools/skills.py stats --repo "$REPO" --out stats.json
-
       - name: Build
-        run: |
-          if [ -f stats.json ]; then STATS="--stats stats.json"; else STATS=""; fi
-          python tools/skills.py build --out dist --base-url "$BASE_URL" --repo "$REPO" $STATS
+        run: python tools/skills.py build --out dist --base-url "$BASE_URL" --repo "$REPO"
 
       - name: Create missing releases
         env:
@@ -71,6 +64,22 @@ jobs:
                 --notes "Skill ${id} version ${version}. Install through the Cheburnexus plugin Library page or unpack the zip into .claude/skills/${id}/."
             fi
           done < releases.txt
+
+      - name: Create missing discussions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/skills.py discussions --repo "$REPO"
+
+      - name: Fetch stats
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/skills.py stats --repo "$REPO" --out stats.json --previous "$BASE_URL/index.json"
+
+      - name: Rebuild with stats
+        run: |
+          if [ -f stats.json ]; then STATS="--stats stats.json"; else STATS=""; fi
+          python tools/skills.py build --out dist --base-url "$BASE_URL" --repo "$REPO" $STATS
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

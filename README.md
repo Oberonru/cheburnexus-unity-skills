@@ -69,12 +69,14 @@ python tools/skills.py stats --repo Oberonru/cheburnexus-unity-skills --out stat
 One-time steps on GitHub:
 
 1. Settings, Pages: set the source to **GitHub Actions**.
-2. Enable **Discussions** and create a discussion category named **Skills**. Per skill,
-   create one discussion whose title is exactly the skill id; its upvotes become the
-   skill's likes in the catalog. Without the category, likes stay `null`.
+2. Enable **Discussions** and create a discussion category named **Skills**. Do not
+   create per-skill discussions by hand: `publish` creates one for every skill that lacks
+   it (title is exactly the skill id); its upvotes become the skill's likes in the
+   catalog. If duplicates exist, the oldest one counts. Without the category, likes stay
+   `null`. The workflows already request the `discussions` permission.
 3. Workflows: `validate` runs on pull requests and pushes; `publish` runs on push to
-   `main` (builds, creates a release `<id>-v<version>` for every new version, deploys
-   Pages); `stats` runs nightly and refreshes counters.
+   `main` (builds, creates a release `<id>-v<version>` for every new version, creates
+   missing discussions, refreshes counters, deploys Pages); `stats` runs nightly and refreshes counters.
 
 ## License
 
