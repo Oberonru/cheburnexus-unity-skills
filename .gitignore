@@ -1,3 +1,16 @@
 dist/
 stats.json
 __pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# local Claude files
+.claude/settings.local.json
