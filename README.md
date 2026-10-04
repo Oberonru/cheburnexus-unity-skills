@@ -27,7 +27,8 @@ Skills have a suggested install mode in `metadata.kind`:
 ## Catalog
 
 The catalog is generated from this repository and published to GitHub Pages as
-`index.json` (skill list, versions, file hashes, zip URLs, download and like counters).
+`index.json` (skill list, versions, file hashes, zip URLs, download and like counters). Each skill
+has an optional `lang` field (`en` or `ru`, default `en`); index schema stays `1`.
 The plugin reads that file.
 
 Skills in `skills/` today:

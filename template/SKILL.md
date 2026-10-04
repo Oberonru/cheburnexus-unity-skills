@@ -18,6 +18,8 @@ metadata:
   tags: "unity, example"
   # auto = the agent loads it by itself; manual = the user switches it on per chat.
   kind: auto
+  # Optional. Language of the skill text: en or ru. Default en.
+  lang: en
   # Optional, up to 120 chars, shown in the catalog row. Defaults to description.
   summary: Short catalog line.
 ---
