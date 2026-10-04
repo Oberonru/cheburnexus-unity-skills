@@ -31,7 +31,6 @@ NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 LICENSES = {"MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0", "CC-BY-4.0"}
 KINDS = {"auto", "manual"}
-LANGS = {"en", "ru"}
 CODE_EXTS = {".cs", ".py", ".sh", ".ps1", ".js"}
 
 MAX_SKILL_MD_LINES = 500
@@ -270,9 +269,6 @@ def validate_skill(sid: str, categories: set[str]) -> list[str]:
     kind = meta.get("kind")
     if kind and kind not in KINDS:
         err(f"metadata.kind '{kind}' must be one of: auto, manual")
-    lang = meta.get("lang")
-    if lang is not None and lang not in LANGS:
-        err(f"metadata.lang '{lang}' must be one of: en, ru (or omit it; default is en)")
     summary = meta.get("summary")
     if summary is not None and len(summary) > 120:
         err(f"metadata.summary too long ({len(summary)} > 120)")
@@ -456,7 +452,6 @@ def cmd_build(args) -> int:
             "category": meta["category"],
             "tags": tags,
             "kind": meta["kind"],
-            "lang": meta.get("lang") or "en",
             "version": version,
             "license": top["license"],
             "updated": last_commit_date(sid),

@@ -25,7 +25,6 @@ metadata:
   category: workflow
   tags: "unity, example"
   kind: auto
-  lang: en
   summary: Short line for the catalog row.
 ---
 
@@ -68,8 +67,7 @@ skill you add or change, the check fails.
    To also check the version bump, add `--against origin/main`.
 4. Open a pull request. CI runs the same validation.
 
-Skills may be written in English or Russian. Set `metadata.lang` to `en` or `ru`
-(optional, `en` by default). Tooling and docs in this repository stay in English.
+All text in this repository is in English.
 
 ## SKILL.md format
 
@@ -87,7 +85,6 @@ metadata:
   category: workflow
   tags: "comma, separated"
   kind: auto
-  lang: en
   summary: Short line for the catalog row.
 ---
 ```
@@ -102,7 +99,6 @@ metadata:
 | `metadata.version` | yes | Semver `MAJOR.MINOR.PATCH`. |
 | `metadata.category` | yes | An id from `categories.json`. |
 | `metadata.kind` | yes | `auto` (agent loads it by itself) or `manual` (user switches it on per chat). A suggestion for the install mode. |
-| `metadata.lang` | no | Language of the skill text: `en` or `ru`. Default `en`. Written to `index.json` as `lang`. |
 | `metadata.tags` | no | Comma separated words. |
 | `metadata.summary` | no | Up to 120 chars; defaults to `description`. |
 

@@ -12,4 +12,4 @@
 - [ ] `metadata.version` bumped for any change to an existing skill
 - [ ] I wrote or have the right to share every file, and the license is one from the allow-list
 - [ ] Scripts (if any) are small, readable, and do nothing surprising (no network, no hidden payloads)
-- [ ] Text is in English or Russian (set `metadata.lang`)
+- [ ] Text is in English
