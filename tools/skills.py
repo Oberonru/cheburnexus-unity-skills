@@ -314,7 +314,8 @@ def check_version_bumps(ref: str) -> list[str]:
 
 
 def check_pr_author(ref: str, pr_author: str) -> list[str]:
-    """Fail if a new or changed skill names a maintainer as author but the PR author is someone else."""
+    """Fail if a new or changed skill names a maintainer as author but the PR author is someone else;
+    warn (annotation, no failure) when the author is anyone else who is not the PR author."""
     errs: list[str] = []
     r = git("diff", "--name-only", ref)
     if r.returncode != 0:
@@ -333,9 +334,15 @@ def check_pr_author(ref: str, pr_author: str) -> list[str]:
             author = read_skill_meta(SKILLS_DIR / sid)[1].get("author", "")
         except (OSError, FrontmatterError):
             continue
-        if author.lower() in verified and author.lower() != pr_author.lower():
+        if author.lower() == pr_author.lower():
+            continue
+        if author.lower() in verified:
             errs.append(f"skills/{sid}: metadata.author is maintainer '{author}' but the PR author is "
                         f"'{pr_author}' - set metadata.author to your own GitHub login")
+        else:
+            # Not an error: sharing someone else's skill is fine. Shown as a yellow annotation on the PR.
+            print(f"::warning file=skills/{sid}/SKILL.md::metadata.author is '{author}' but the PR author is "
+                  f"'{pr_author}'. Fine if you share someone else's skill; otherwise set your own GitHub login.")
     return errs
 
 
