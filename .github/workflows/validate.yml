@@ -17,5 +17,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate skills
-        run: python tools/skills.py validate
+      - name: Validate skills (push)
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: python tools/skills.py validate --against "$BEFORE"
+      - name: Validate skills (pull request)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          python tools/skills.py validate --against "origin/${BASE_REF}" --pr-author "$PR_AUTHOR"

@@ -2,11 +2,69 @@
 
 Thanks for adding a skill. Keep it small, specific and useful for real Unity work.
 
-## Quick start
+## Quick start (no git needed)
+
+You can add a skill from the GitHub website. You only need a GitHub account.
+
+1. Open the repository page on GitHub.
+2. Press **Add file**, then **Create new file**.
+3. In the name box type `skills/<your-id>/SKILL.md`. Typing `/` makes folders.
+   The id uses lowercase letters, digits and single hyphens, for example `unity-pooling`.
+4. Paste this template and edit it. `name` must equal `<your-id>`. Put your own
+   GitHub login in `author`.
+
+```
+---
+name: your-id
+description: What the skill does and when to use it, on one line.
+license: MIT
+metadata:
+  title: Your Skill Title
+  author: your-github-login
+  version: 1.0.0
+  category: workflow
+  tags: "unity, example"
+  kind: auto
+  summary: Short line for the catalog row.
+---
+
+# Your Skill Title
+
+Write instructions for the agent here. Keep it short and specific.
+```
+
+   Allowed values:
+   - `category`: `architecture`, `ui`, `ai`, `animation`, `performance`, `testing`,
+     `networking`, `assets`, `code-quality`, `workflow` (the list is in `categories.json`).
+   - `kind`: `auto` (the agent loads it by itself) or `manual` (the user switches it on per chat).
+   - `license`: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `CC0-1.0`, `CC-BY-4.0`.
+   - `version`: start with `1.0.0`.
+
+5. Press **Commit changes**, then **Propose changes** (GitHub makes a fork and a branch for you).
+6. Press **Create pull request**.
+7. Wait for the `validate` check on the pull request. If you are a first-time contributor,
+   a maintainer may need to approve the run first.
+8. If the check is red, open **Details**, read the error, then open the file in your pull
+   request (**Files changed**, three dots, **Edit file**; or the pencil icon) and fix it.
+   The check runs again after each change.
+
+Extra files (for example a script): open your pull request branch, press **Add file**,
+**Create new file**, and use the path `skills/<your-id>/scripts/x.cs`. Commit to the
+same branch, so it stays in the same pull request. Read the limits below first.
+
+Updating an existing skill: open `skills/<id>/SKILL.md`, press the pencil icon, make your
+change, **and raise `metadata.version`** (for example `1.0.0` to `1.0.1`). Without the
+bump the check fails with "bump metadata.version in skills/<id>/SKILL.md".
+
+Keep `metadata.author` as your own GitHub login. If you set a maintainer's login in a
+skill you add or change, the check fails.
+
+## Quick start (local, optional)
 
 1. Copy `template/SKILL.md` to `skills/<your-id>/SKILL.md`.
 2. Fill in the frontmatter, write the instructions.
 3. Run `python tools/skills.py validate` (Python 3.12, no dependencies).
+   To also check the version bump, add `--against origin/main`.
 4. Open a pull request. CI runs the same validation.
 
 All text in this repository is in English.
@@ -75,8 +133,9 @@ skills/<id>/assets/       optional text assets (for example svg)
 
 Bump `metadata.version` on **any** change to a skill folder, even a typo.
 Use semver: PATCH for fixes, MINOR for added guidance, MAJOR for a changed meaning.
-On push to `main`, CI compares against the previous commit and fails with
-"bump metadata.version" if files changed but the version did not. Each new version
+On pull requests and pushes, CI compares against the base branch (or the previous commit)
+and fails with "bump metadata.version in skills/<id>/SKILL.md" if files changed but the
+version did not. New skills are fine. Each new version
 becomes a release `<id>-v<version>` with a zip attached; released versions are not rewritten.
 
 ## Scripts review policy

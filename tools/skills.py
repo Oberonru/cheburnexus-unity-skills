@@ -308,7 +308,34 @@ def check_version_bumps(ref: str) -> list[str]:
         old_v = version_of_text(old.stdout)
         new_v = version_of_text(skill_md.read_text(encoding="utf-8"))
         if old_v is not None and old_v == new_v:
-            errs.append(f"skills/{sid}: files changed but metadata.version is still {new_v} - bump metadata.version")
+            errs.append(f"skills/{sid}: files changed but metadata.version is still {new_v} - "
+                        f"bump metadata.version in skills/{sid}/SKILL.md")
+    return errs
+
+
+def check_pr_author(ref: str, pr_author: str) -> list[str]:
+    """Fail if a new or changed skill names a maintainer as author but the PR author is someone else."""
+    errs: list[str] = []
+    r = git("diff", "--name-only", ref)
+    if r.returncode != 0:
+        return [f"git diff against {ref} failed: {r.stderr.strip()}"]
+    try:
+        verified = {v.lower() for v in load_json(ROOT / "maintainers.json").get("verified", [])}
+    except (OSError, ValueError):
+        verified = set()
+    changed = {p.split("/")[1] for p in r.stdout.splitlines()
+               if len(p.split("/")) >= 3 and p.startswith("skills/")}
+    for sid in sorted(changed):
+        skill_md = SKILLS_DIR / sid / "SKILL.md"
+        if not skill_md.is_file():
+            continue
+        try:
+            author = read_skill_meta(SKILLS_DIR / sid)[1].get("author", "")
+        except (OSError, FrontmatterError):
+            continue
+        if author.lower() in verified and author.lower() != pr_author.lower():
+            errs.append(f"skills/{sid}: metadata.author is maintainer '{author}' but the PR author is "
+                        f"'{pr_author}' - set metadata.author to your own GitHub login")
     return errs
 
 
@@ -330,11 +357,14 @@ def cmd_validate(args) -> int:
             errs.append(f"skills/{sid}: duplicate id (case-insensitive clash with {lowered[sid.lower()]})")
         lowered[sid.lower()] = sid
         errs.extend(validate_skill(sid, categories))
-    if args.against and os.environ.get("GITHUB_EVENT_NAME", "push") == "push":
+    if args.against:
         if re.fullmatch(r"0+", args.against):
             print("note: --against is an all-zero ref; skipping version-bump check")
         else:
             errs.extend(check_version_bumps(args.against))
+            pr_author = args.pr_author or os.environ.get("PR_AUTHOR", "")
+            if pr_author:
+                errs.extend(check_pr_author(args.against, pr_author))
     for e in errs:
         print(f"ERROR {e}")
     if errs:
@@ -617,6 +647,8 @@ def main(argv=None) -> int:
 
     v = sub.add_parser("validate", help="validate all skills")
     v.add_argument("--against", help="git ref; error if a skill changed without a metadata.version bump")
+    v.add_argument("--pr-author", help="PR author login (default: env PR_AUTHOR); a maintainer-authored skill "
+                                       "may only be added or changed by that maintainer")
     v.set_defaults(fn=cmd_validate)
 
     b = sub.add_parser("build", help="build dist/")

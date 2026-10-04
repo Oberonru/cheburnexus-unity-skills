@@ -37,6 +37,11 @@ Skills in `skills/` today:
 | `unity-ui-work` | UI | auto |
 | `unity-behavior-graph` | AI | manual |
 
+## Add your skill
+
+You can add a skill from the GitHub website, without git. Follow the
+[Quick start in CONTRIBUTING.md](CONTRIBUTING.md#quick-start-no-git-needed).
+
 ## Contributing
 
 Short version: add `skills/<your-id>/SKILL.md`, run `python tools/skills.py validate`,
