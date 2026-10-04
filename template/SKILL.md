@@ -16,6 +16,8 @@ metadata:
   category: workflow
   # Optional, comma separated.
   tags: "unity, example"
+  # Optional, comma separated MCP tool names (letters, digits, _), e.g. "scene_get_object, prefab_batch".
+  # tools: "scene_get_object"
   # auto = the agent loads it by itself; manual = the user switches it on per chat.
   kind: auto
   # Optional, up to 120 chars, shown in the catalog row. Defaults to description.

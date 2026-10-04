@@ -28,7 +28,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = ROOT / "skills"
 
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+SEMVER_RE =re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 LICENSES = {"MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0", "CC-BY-4.0"}
 KINDS = {"auto", "manual"}
 CODE_EXTS = {".cs", ".py", ".sh", ".ps1", ".js"}
@@ -269,10 +270,18 @@ def validate_skill(sid: str, categories: set[str]) -> list[str]:
     kind = meta.get("kind")
     if kind and kind not in KINDS:
         err(f"metadata.kind '{kind}' must be one of: auto, manual")
+    for tool in parse_tools(meta):
+        if not TOOL_NAME_RE.match(tool):
+            err(f"metadata.tools: '{tool}' is not a tool name (letters, digits and '_' only)")
     summary = meta.get("summary")
     if summary is not None and len(summary) > 120:
         err(f"metadata.summary too long ({len(summary)} > 120)")
     return errs
+
+
+def parse_tools(meta: dict) -> list[str]:
+    """metadata.tools: comma separated MCP tool names, same shape as metadata.tags."""
+    return [t.strip() for t in meta.get("tools", "").split(",") if t.strip()]
 
 
 def version_of_text(text: str) -> str | None:
@@ -451,6 +460,7 @@ def cmd_build(args) -> int:
             "verified": meta["author"].lower() in verified,
             "category": meta["category"],
             "tags": tags,
+            "tools": parse_tools(meta),
             "kind": meta["kind"],
             "version": version,
             "license": top["license"],

@@ -84,6 +84,7 @@ metadata:
   version: 1.0.0
   category: workflow
   tags: "comma, separated"
+  tools: "scene_get_object, prefab_batch"
   kind: auto
   summary: Short line for the catalog row.
 ---
@@ -100,6 +101,7 @@ metadata:
 | `metadata.category` | yes | An id from `categories.json`. |
 | `metadata.kind` | yes | `auto` (agent loads it by itself) or `manual` (user switches it on per chat). A suggestion for the install mode. |
 | `metadata.tags` | no | Comma separated words. |
+| `metadata.tools` | no | Comma separated MCP tool names a manual skill needs, e.g. `"scene_get_object, prefab_batch"`. Letters, digits, `_` only. The plugin turns them into the card's tools line. |
 | `metadata.summary` | no | Up to 120 chars; defaults to `description`. |
 
 Frontmatter limits: the plugin parser reads a small YAML subset. Use top-level `key: value`
