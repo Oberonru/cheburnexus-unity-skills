@@ -6,7 +6,7 @@
 
 ## Checklist
 
-- [ ] `python tools/skills.py validate` passes locally
+- [ ] The `validate` check below is green (it runs by itself on this PR; you do not need Python)
 - [ ] Folder name equals `name` in the frontmatter
 - [ ] `description` says what the skill does and when to use it (single line)
 - [ ] `metadata.version` bumped for any change to an existing skill
