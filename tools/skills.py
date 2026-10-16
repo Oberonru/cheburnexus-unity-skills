@@ -477,6 +477,7 @@ def cmd_build(args) -> int:
             "discussUrl": st.get("discussUrl"),
             "downloads": st.get("downloads"),
             "likes": st.get("likes"),
+            "comments": st.get("comments"),
         })
     index = {
         "schema": 1,
@@ -546,9 +547,9 @@ def find_skills_category(owner: str, name: str, token: str):
 
 
 def list_discussions(owner: str, name: str, cat_id: str, token: str) -> dict[str, dict]:
-    """{title: {likes, url, number}} for a category. Duplicate titles: the oldest wins."""
+    """{title: {likes, comments, url, number}} for a category. Duplicate titles: the oldest wins."""
     q = ("query($o:String!,$n:String!,$c:ID!,$a:String){repository(owner:$o,name:$n){"
-         "discussions(first:100,categoryId:$c,after:$a){nodes{number title url createdAt upvoteCount}"
+         "discussions(first:100,categoryId:$c,after:$a){nodes{number title url createdAt upvoteCount comments{totalCount}}"
          "pageInfo{hasNextPage endCursor}}}}")
     found: dict[str, dict] = {}
     keys: dict[str, tuple] = {}
@@ -560,7 +561,7 @@ def list_discussions(owner: str, name: str, cat_id: str, token: str) -> dict[str
             # createdAt is ISO 8601 UTC, so string order is time order; number breaks ties
             key = (n["createdAt"], n["number"])
             if t not in found or key < keys[t]:
-                found[t] = {"likes": n["upvoteCount"], "url": n["url"], "number": n["number"]}
+                found[t] = {"likes": n["upvoteCount"], "comments": n["comments"]["totalCount"], "url": n["url"], "number": n["number"]}
                 keys[t] = key
         if not d["pageInfo"]["hasNextPage"]:
             break
@@ -614,7 +615,7 @@ def cmd_discussions(args) -> int:
 def cmd_stats(args) -> int:
     token = os.environ.get("GITHUB_TOKEN") or None
     ids = list_skill_ids()
-    result: dict[str, dict] = {sid: {"downloads": None, "likes": None, "discussUrl": None} for sid in ids}
+    result: dict[str, dict] = {sid: {"downloads": None, "likes": None, "comments": None, "discussUrl": None} for sid in ids}
     try:
         totals = fetch_downloads(args.repo, token)
         for sid in ids:
@@ -630,6 +631,7 @@ def cmd_stats(args) -> int:
                 for sid in ids:
                     if sid in disc:
                         result[sid]["likes"] = disc[sid]["likes"]
+                        result[sid]["comments"] = disc[sid]["comments"]
                         result[sid]["discussUrl"] = disc[sid]["url"]
         except (urllib.error.URLError, ValueError, OSError, KeyError, TypeError) as e:
             print(f"warning: could not fetch discussions: {e}", file=sys.stderr)
@@ -642,7 +644,7 @@ def cmd_stats(args) -> int:
             with urllib.request.urlopen(req, timeout=30) as r:
                 prev = {x["id"]: x for x in json.loads(r.read().decode("utf-8")).get("skills", [])}
             for sid, st in result.items():
-                for k in ("downloads", "likes", "discussUrl"):
+                for k in ("downloads", "likes", "comments", "discussUrl"):
                     if st[k] is None and prev.get(sid, {}).get(k) is not None:
                         st[k] = prev[sid][k]
         except (urllib.error.URLError, ValueError, OSError, KeyError, TypeError) as e:
