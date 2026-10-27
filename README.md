@@ -24,19 +24,6 @@ Skills have a suggested install mode in `metadata.kind`:
 - `auto` - the agent loads the skill by itself when the task matches its description.
 - `manual` - the user switches it on per chat.
 
-## Catalog
-
-The catalog is generated from this repository and published to GitHub Pages as
-`index.json` (skill list, versions, file hashes, zip URLs, download and like counters).
-The plugin reads that file.
-
-Skills in `skills/` today:
-
-| Skill | Category | Kind |
-| --- | --- | --- |
-| `unity-ui-work` | UI | auto |
-| `unity-behavior-graph` | AI | manual |
-
 ## Add your skill
 
 You can add a skill from the GitHub website, without git. Follow the
